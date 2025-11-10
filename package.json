@@ -1,12 +1,58 @@
 {
   "name": "next-chatgpt-apps",
-  "module": "index.ts",
+  "version": "0.0.0",
+  "description": "A comprehensive toolkit for integrating Next.js applications with ChatGPT's native app platform",
+  "author": "Clutch Creator",
+  "license": "MIT",
+  "keywords": [
+    "nextjs",
+    "chatgpt",
+    "openai",
+    "mcp",
+    "model-context-protocol",
+    "chatgpt-apps",
+    "react",
+    "typescript"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/clutch-creator/next-chatgpt-apps.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "packageManager": "bun@1.2.14",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "type": "module",
-  "private": true,
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./proxy": {
+      "import": "./dist/proxy/index.js",
+      "types": "./dist/proxy/index.d.ts"
+    },
+    "./config": {
+      "import": "./dist/config/with-chatgpt.js",
+      "types": "./dist/config/with-chatgpt.d.ts"
+    },
+    "./hooks": {
+      "import": "./dist/hooks/index.js",
+      "types": "./dist/hooks/index.d.ts"
+    },
+    "./components": {
+      "import": "./dist/components/index.js",
+      "types": "./dist/components/index.d.ts"
+    }
+  },
   "files": [
     "dist",
     "src",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "swc src --out-dir dist --config-file ./.swcrc --delete-dir-on-start --strip-leading-paths",
@@ -20,10 +66,18 @@
     "version-packages": "changeset version",
     "release": "bun run build && changeset publish",
     "test": "bun test",
-    "test:watch": "bun test --watch"
+    "test:watch": "bun test --watch",
+    "prepublishOnly": "bun run build"
+  },
+  "peerDependencies": {
+    "next": ">=16.0.0",
+    "react": ">=19.0.0",
+    "react-dom": ">=19.0.0"
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
     "@changesets/changelog-git": "^0.2.1",
     "@changesets/cli": "^2.29.7",
     "@eslint/js": "^9.38.0",
@@ -34,6 +88,9 @@
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.6.2",
     "typescript": "^5",
-    "typescript-eslint": "^8.46.1"
+    "typescript-eslint": "^8.46.1",
+    "next": "^16.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   }
 }
