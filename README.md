@@ -6,12 +6,18 @@ A comprehensive toolkit for integrating Next.js applications with ChatGPT's nati
 
 - 🎯 **Easy Integration** - Simple setup with minimal configuration
 - 🔧 **Next.js Config Helper** - `withChatGPT()` wrapper for automatic configuration
-- ⚛️ **React Components** - Provider component for seamless integration
-- 🪝 **React Hooks** - Type-safe hooks for ChatGPT API interactions
+- ⚛️ **React Components** - Bootstrap component for seamless iframe setup
+- 🪝 **20+ React Hooks** - Type-safe hooks for complete ChatGPT API access
 - 🌐 **CORS Proxy** - Ready-to-use proxy for cross-origin requests
 - 🔒 **Type Safety** - Full TypeScript support with comprehensive types
 - 🚀 **Zero Runtime Overhead** - Only active when running inside ChatGPT
 - 📦 **Next.js 16+ Ready** - Built for the latest Next.js proxy convention
+- 🎨 **Theme Support** - Automatic light/dark theme detection
+- 📱 **Device Responsive** - User agent and device capability detection
+- 💾 **State Management** - Persistent widget state across sessions
+- 🔧 **Tool Integration** - Call MCP server tools from your components
+- 🌍 **Localization** - User locale detection for i18n
+- 📐 **Layout Aware** - Safe area and height constraints for perfect UI fit
 
 ## Installation
 
@@ -84,7 +90,44 @@ export default function RootLayout({
 
 ## Usage
 
-### Using Hooks
+### Available Hooks
+
+#### Core Functionality
+
+- `useSendMessage()` - Send follow-up messages to ChatGPT
+- `useCallTool()` - Call MCP server tools
+- `useOpenExternal()` - Open external links
+- `useRequestDisplayMode()` - Request layout changes (inline/pip/fullscreen)
+
+#### Data Access
+
+- `useToolOutput<T>()` - Access tool output data
+- `useToolInput<T>()` - Access tool input parameters
+- `useToolResponseMetadata<T>()` - Access server metadata
+- `useWidgetProps<T>()` - Access widget properties
+
+#### State Management
+
+- `useWidgetState<T>()` - Manage persistent widget state
+
+#### Display & Layout
+
+- `useDisplayMode()` - Get current display mode
+- `useTheme()` - Get current theme (light/dark)
+- `useMaxHeight()` - Get maximum height constraint
+- `useSafeArea()` - Get safe area insets (mobile)
+
+#### Device & User
+
+- `useUserAgent()` - Get device type and capabilities
+- `useLocale()` - Get user's locale
+- `useIsInChatGPT()` - Check if running in ChatGPT
+
+#### Advanced
+
+- `useOpenAiGlobal<K>()` - Subscribe to specific OpenAI global properties
+
+### Examples
 
 #### Send Messages to ChatGPT
 
@@ -99,6 +142,43 @@ export function MyComponent() {
   return (
     <button onClick={() => sendMessage('Show me more examples')}>
       Get More Examples
+    </button>
+  );
+}
+```
+
+#### Call MCP Server Tools
+
+```tsx
+'use client';
+
+import { useCallTool } from 'next-chatgpt-apps';
+
+export function RefreshButton() {
+  const callTool = useCallTool();
+
+  const handleRefresh = async () => {
+    const result = await callTool('refresh_data', { city: 'NYC' });
+    console.log('Refreshed:', result.structuredContent);
+  };
+
+  return <button onClick={handleRefresh}>Refresh Data</button>;
+}
+```
+
+#### Manage Widget State
+
+```tsx
+'use client';
+
+import { useWidgetState } from 'next-chatgpt-apps';
+
+export function Counter() {
+  const [state, setState] = useWidgetState({ count: 0 });
+
+  return (
+    <button onClick={() => setState(prev => ({ count: prev.count + 1 }))}>
+      Count: {state.count}
     </button>
   );
 }
@@ -133,12 +213,57 @@ export function MyComponent() {
 ```tsx
 'use client';
 
-import { useDisplayMode } from 'next-chatgpt-apps';
+import { useDisplayMode, useRequestDisplayMode } from 'next-chatgpt-apps';
 
 export function MyComponent() {
   const displayMode = useDisplayMode();
+  const requestDisplayMode = useRequestDisplayMode();
 
-  return displayMode === 'fullscreen' ? <FullScreenView /> : <CompactView />;
+  return (
+    <div>
+      <p>Current mode: {displayMode}</p>
+      <button onClick={() => requestDisplayMode('fullscreen')}>
+        Go Fullscreen
+      </button>
+      {displayMode === 'fullscreen' ? <FullScreenView /> : <CompactView />}
+    </div>
+  );
+}
+```
+
+#### Theme Support
+
+```tsx
+'use client';
+
+import { useTheme } from 'next-chatgpt-apps';
+
+export function ThemedComponent() {
+  const theme = useTheme();
+
+  return (
+    <div className={theme === 'dark' ? 'dark-theme' : 'light-theme'}>
+      {/* Your themed content */}
+    </div>
+  );
+}
+```
+
+#### Device-Responsive UI
+
+```tsx
+'use client';
+
+import { useUserAgent } from 'next-chatgpt-apps';
+
+export function ResponsiveComponent() {
+  const userAgent = useUserAgent();
+
+  if (userAgent?.device.type === 'mobile') {
+    return <MobileView />;
+  }
+
+  return <DesktopView />;
 }
 ```
 
@@ -178,15 +303,159 @@ export function MyComponent() {
 }
 ```
 
+#### Localization Support
+
+```tsx
+'use client';
+
+import { useLocale } from 'next-chatgpt-apps';
+
+export function LocalizedComponent() {
+  const locale = useLocale(); // 'en-US', 'es-ES', etc.
+
+  const messages = {
+    'en-US': 'Hello',
+    'es-ES': 'Hola',
+    'fr-FR': 'Bonjour',
+  };
+
+  return <h1>{messages[locale] || messages['en-US']}</h1>;
+}
+```
+
+#### Safe Area Handling
+
+```tsx
+'use client';
+
+import { useSafeArea } from 'next-chatgpt-apps';
+
+export function SafeComponent() {
+  const safeArea = useSafeArea();
+
+  return (
+    <div
+      style={{
+        paddingTop: safeArea?.insets.top || 0,
+        paddingBottom: safeArea?.insets.bottom || 0,
+        paddingLeft: safeArea?.insets.left || 0,
+        paddingRight: safeArea?.insets.right || 0,
+      }}
+    >
+      Content with safe area padding
+    </div>
+  );
+}
+```
+
+#### Dynamic Height Constraints
+
+```tsx
+'use client';
+
+import { useMaxHeight } from 'next-chatgpt-apps';
+
+export function ScrollableComponent() {
+  const maxHeight = useMaxHeight();
+
+  return (
+    <div
+      style={{
+        maxHeight: maxHeight ? `${maxHeight}px` : 'auto',
+        overflowY: 'auto',
+      }}
+    >
+      Scrollable content that respects ChatGPT's height constraints
+    </div>
+  );
+}
+```
+
+#### Access Tool Input
+
+```tsx
+'use client';
+
+import { useToolInput } from 'next-chatgpt-apps';
+
+interface ToolInput {
+  query: string;
+  options: { limit: number };
+}
+
+export function ToolComponent() {
+  const input = useToolInput<ToolInput>();
+
+  return (
+    <div>
+      <h2>Processing query: {input?.query}</h2>
+      <p>Limit: {input?.options.limit}</p>
+    </div>
+  );
+}
+```
+
+#### Access Tool Response Metadata
+
+```tsx
+'use client';
+
+import { useToolResponseMetadata } from 'next-chatgpt-apps';
+
+interface Metadata {
+  requestId: string;
+  timestamp: number;
+}
+
+export function MetadataComponent() {
+  const metadata = useToolResponseMetadata<Metadata>();
+
+  return (
+    <div>
+      <p>Request ID: {metadata?.requestId}</p>
+      <p>Timestamp: {new Date(metadata?.timestamp || 0).toLocaleString()}</p>
+    </div>
+  );
+}
+```
+
 ### Available Hooks
+
+#### Core Functionality
 
 - `useChatGPT()` - Access full ChatGPT API
 - `useSendMessage()` - Send messages to ChatGPT
+- `useCallTool()` - Call MCP server tools
 - `useOpenExternal()` - Open links in user's browser
+- `useRequestDisplayMode()` - Request display mode changes
+
+#### Data Access
+
 - `useWidgetProps<T>()` - Access widget props with type safety
 - `useToolOutput<T>()` - Access tool output data
+- `useToolInput<T>()` - Access tool input arguments
+- `useToolResponseMetadata<T>()` - Access tool response metadata
+
+#### State Management
+
+- `useWidgetState<T>()` - Persistent widget state
+
+#### Display & Layout
+
 - `useDisplayMode()` - Get current display mode
+- `useTheme()` - Get current theme (light/dark)
+- `useMaxHeight()` - Get maximum height constraint
+- `useSafeArea()` - Get safe area insets
+
+#### Device & User
+
+- `useUserAgent()` - Get user agent and capabilities
+- `useLocale()` - Get user's locale
 - `useIsInChatGPT()` - Check if running in ChatGPT
+
+#### Advanced
+
+- `useOpenAiGlobal<T>()` - Subscribe to any OpenAI global property
 
 ### Custom Proxy Logic
 
@@ -260,18 +529,112 @@ The base URL is automatically determined from:
 - `VERCEL_URL` (Vercel fallback)
 - `http://localhost:3000` (development)
 
+## Migration Guide
+
+### Upgrading to Latest Version
+
+#### Breaking Change: Display Mode Values
+
+The display mode value `'compact'` has been renamed to `'pip'` to match the official OpenAI Apps SDK terminology.
+
+**Before:**
+
+```tsx
+const displayMode = useDisplayMode();
+if (displayMode === 'compact') {
+  // Compact view
+}
+
+await requestDisplayMode('compact');
+```
+
+**After:**
+
+```tsx
+const displayMode = useDisplayMode();
+if (displayMode === 'pip') {
+  // Picture-in-picture view
+}
+
+await requestDisplayMode('pip');
+```
+
+#### New Hooks Available
+
+You can now access many more ChatGPT features:
+
+```tsx
+// State management
+const [state, setState] = useWidgetState({ count: 0 });
+
+// Tool calling
+const callTool = useCallTool();
+await callTool('my_tool', { arg: 'value' });
+
+// Theme detection
+const theme = useTheme();
+
+// Device detection
+const userAgent = useUserAgent();
+
+// Localization
+const locale = useLocale();
+
+// Layout constraints
+const maxHeight = useMaxHeight();
+const safeArea = useSafeArea();
+
+// Input/output metadata
+const input = useToolInput<MyInput>();
+const metadata = useToolResponseMetadata<MyMetadata>();
+```
+
+See the [Usage](#usage) section for complete examples.
+
 ## TypeScript Support
 
 Full TypeScript support with comprehensive type definitions:
 
 ```tsx
 import type {
+  // Core API
   OpenAIAPI,
+  CallToolResponse,
+  SetGlobalsEvent,
+
+  // Display & UI
   DisplayMode,
+  Theme,
+  SafeArea,
+
+  // Device & User
+  DeviceType,
+  UserAgent,
+
+  // Data Types
   ChatGPTToolOutput,
-  ChatGPTConfig,
   WidgetMetadata,
+  ChatGPTConfig,
 } from 'next-chatgpt-apps';
+
+// Event constant
+import { SET_GLOBALS_EVENT_TYPE } from 'next-chatgpt-apps';
+```
+
+### Generic Type Parameters
+
+Most hooks support TypeScript generics for type-safe data access:
+
+```tsx
+interface MyData {
+  name: string;
+  value: number;
+}
+
+const output = useToolOutput<MyData>(); // Typed as MyData | null
+const input = useToolInput<MyData>(); // Typed as MyData | null
+const [state, setState] = useWidgetState<MyData>({ name: '', value: 0 });
+const response = await callTool<MyData>('tool_name', args);
 ```
 
 ## Requirements

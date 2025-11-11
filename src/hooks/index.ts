@@ -4,26 +4,54 @@
  * React hooks for ChatGPT integration
  */
 
-import { useCallback, useEffect, useState } from 'react';
-import type {
-  ChatGPTToolOutput,
-  DisplayMode,
-  OpenAIAPI,
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import {
+  SET_GLOBALS_EVENT_TYPE,
+  type ChatGPTToolOutput,
+  type DisplayMode,
+  type OpenAIAPI,
+  type SafeArea,
+  type SetGlobalsEvent,
+  type Theme,
+  type UserAgent,
 } from '../types/chatgpt';
 
+type SetStateAction<T> = T | ((prev: T) => T);
+
 /**
- * Initialize the openai object if it doesn't exist
+ * Base hook to subscribe to specific OpenAI global properties
+ * Listens for openai:set_globals events and updates reactively
  */
-function ensureOpenAIObject(): OpenAIAPI {
+export function useOpenAiGlobal<K extends keyof OpenAIAPI>(
+  key: K
+): OpenAIAPI[K] | undefined {
   if (typeof window === 'undefined') {
-    return {} as OpenAIAPI;
+    return undefined;
   }
 
-  if (!window.openai) {
-    (window as any).openai = {};
-  }
+  return useSyncExternalStore(
+    onChange => {
+      const handleSetGlobal = (event: Event) => {
+        const customEvent = event as SetGlobalsEvent;
+        const value =
+          customEvent.detail?.globals[
+            key as keyof typeof customEvent.detail.globals
+          ];
+        if (value !== undefined) {
+          onChange();
+        }
+      };
 
-  return window.openai as OpenAIAPI;
+      window.addEventListener(SET_GLOBALS_EVENT_TYPE, handleSetGlobal, {
+        passive: true,
+      });
+
+      return () => {
+        window.removeEventListener(SET_GLOBALS_EVENT_TYPE, handleSetGlobal);
+      };
+    },
+    () => window.openai?.[key]
+  );
 }
 
 /**
@@ -43,29 +71,50 @@ export function useChatGPT() {
     }
   }, []);
 
-  const sendMessage = useCallback((message: string) => {
-    const api = ensureOpenAIObject();
-    if (api.sendMessage) {
-      api.sendMessage(message);
+  const sendFollowUpMessage = useCallback(async (prompt: string) => {
+    if (window.openai?.sendFollowUpMessage) {
+      await window.openai.sendFollowUpMessage({ prompt });
+    } else if (window.openai?.sendMessage) {
+      // Fallback to deprecated method
+      window.openai.sendMessage(prompt);
     }
   }, []);
 
   const openExternal = useCallback((href: string) => {
-    const api = ensureOpenAIObject();
-    if (api.openExternal) {
-      api.openExternal({ href });
+    if (window.openai?.openExternal) {
+      window.openai.openExternal({ href });
     }
   }, []);
 
+  const callTool = useCallback(
+    async (name: string, args: Record<string, unknown>) => {
+      if (window.openai?.callTool) {
+        return await window.openai.callTool(name, args);
+      }
+      return { content: [], structuredContent: null };
+    },
+    []
+  );
+
+  const requestDisplayMode = useCallback(async (mode: DisplayMode) => {
+    if (window.openai?.requestDisplayMode) {
+      return await window.openai.requestDisplayMode({ mode });
+    }
+    return { mode: 'inline' as DisplayMode };
+  }, []);
+
   return {
-    sendMessage,
+    sendMessage: sendFollowUpMessage,
+    sendFollowUpMessage,
     openExternal,
+    callTool,
+    requestDisplayMode,
     isAvailable,
   };
 }
 
 /**
- * Hook to send messages to ChatGPT
+ * Hook to send follow-up messages to ChatGPT
  *
  * @example
  * ```tsx
@@ -77,8 +126,8 @@ export function useChatGPT() {
  * ```
  */
 export function useSendMessage() {
-  const { sendMessage } = useChatGPT();
-  return sendMessage;
+  const { sendFollowUpMessage } = useChatGPT();
+  return sendFollowUpMessage;
 }
 
 /**
@@ -99,6 +148,92 @@ export function useOpenExternal() {
 }
 
 /**
+ * Hook to call MCP server tools
+ *
+ * @example
+ * ```tsx
+ * const callTool = useCallTool();
+ *
+ * const result = await callTool("refresh_data", { city: "NYC" });
+ * ```
+ */
+export function useCallTool() {
+  const { callTool } = useChatGPT();
+  return callTool;
+}
+
+/**
+ * Hook to request display mode changes
+ *
+ * @example
+ * ```tsx
+ * const requestDisplayMode = useRequestDisplayMode();
+ *
+ * <button onClick={() => requestDisplayMode("fullscreen")}>
+ *   Go Fullscreen
+ * </button>
+ * ```
+ */
+export function useRequestDisplayMode() {
+  const { requestDisplayMode } = useChatGPT();
+  return requestDisplayMode;
+}
+
+/**
+ * Hook to manage widget state with persistence
+ *
+ * @example
+ * ```tsx
+ * const [state, setState] = useWidgetState({ count: 0 });
+ *
+ * <button onClick={() => setState(prev => ({ count: prev.count + 1 }))}>
+ *   Count: {state.count}
+ * </button>
+ * ```
+ */
+export function useWidgetState<T extends Record<string, any>>(
+  defaultState: T | (() => T)
+): readonly [T, (state: SetStateAction<T>) => void];
+export function useWidgetState<T extends Record<string, any>>(
+  defaultState?: T | (() => T | null) | null
+): readonly [T | null, (state: SetStateAction<T | null>) => void];
+export function useWidgetState<T extends Record<string, any>>(
+  defaultState?: T | (() => T | null) | null
+): readonly [T | null, (state: SetStateAction<T | null>) => void] {
+  const widgetStateFromWindow = useOpenAiGlobal('widgetState') as T | null;
+
+  const [widgetState, _setWidgetState] = useState<T | null>(() => {
+    if (widgetStateFromWindow != null) {
+      return widgetStateFromWindow;
+    }
+
+    return typeof defaultState === 'function'
+      ? defaultState()
+      : (defaultState ?? null);
+  });
+
+  useEffect(() => {
+    if (widgetStateFromWindow != null) {
+      _setWidgetState(widgetStateFromWindow);
+    }
+  }, [widgetStateFromWindow]);
+
+  const setWidgetState = useCallback((state: SetStateAction<T | null>) => {
+    _setWidgetState(prevState => {
+      const newState = typeof state === 'function' ? state(prevState) : state;
+
+      if (newState != null && window.openai?.setWidgetState) {
+        window.openai.setWidgetState(newState);
+      }
+
+      return newState;
+    });
+  }, []);
+
+  return [widgetState, setWidgetState] as const;
+}
+
+/**
  * Hook to access widget props (tool output data)
  *
  * @example
@@ -107,39 +242,8 @@ export function useOpenExternal() {
  * const name = toolOutput?.name;
  * ```
  */
-export function useWidgetProps<T = any>(): T | undefined {
-  const [toolOutput, setToolOutput] = useState<T | undefined>(undefined);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const api = ensureOpenAIObject();
-    let currentValue = api.toolOutput as T | undefined;
-
-    // Set up a reactive property
-    Object.defineProperty(api, 'toolOutput', {
-      get() {
-        return currentValue;
-      },
-      set(newValue: T) {
-        currentValue = newValue;
-        setToolOutput(newValue);
-      },
-      configurable: true,
-      enumerable: true,
-    });
-
-    // Set initial value
-    if (currentValue !== undefined) {
-      setToolOutput(currentValue);
-    }
-
-    return () => {
-      // Cleanup is handled by not redefining the property
-    };
-  }, []);
-
-  return toolOutput;
+export function useWidgetProps<T = any>(): T | null {
+  return useOpenAiGlobal('toolOutput') as T | null;
 }
 
 /**
@@ -150,8 +254,33 @@ export function useWidgetProps<T = any>(): T | undefined {
  * const data = useToolOutput<{ name: string; timestamp: string }>();
  * ```
  */
-export function useToolOutput<T = any>(): ChatGPTToolOutput<T> | undefined {
+export function useToolOutput<T = any>(): ChatGPTToolOutput<T> | null {
   return useWidgetProps<ChatGPTToolOutput<T>>();
+}
+
+/**
+ * Hook to access tool input parameters
+ *
+ * @example
+ * ```tsx
+ * const input = useToolInput<{ city: string }>();
+ * const city = input?.city;
+ * ```
+ */
+export function useToolInput<T = any>(): T | null {
+  return useOpenAiGlobal('toolInput') as T | null;
+}
+
+/**
+ * Hook to access tool response metadata (not shown to model)
+ *
+ * @example
+ * ```tsx
+ * const metadata = useToolResponseMetadata<{ internalId: string }>();
+ * ```
+ */
+export function useToolResponseMetadata<T = any>(): T | null {
+  return useOpenAiGlobal('toolResponseMetadata') as T | null;
 }
 
 /**
@@ -164,41 +293,84 @@ export function useToolOutput<T = any>(): ChatGPTToolOutput<T> | undefined {
  * return displayMode === 'fullscreen' ? <FullView /> : <CompactView />;
  * ```
  */
-export function useDisplayMode(): DisplayMode | undefined {
-  const [displayMode, setDisplayMode] = useState<DisplayMode | undefined>(
-    undefined
-  );
+export function useDisplayMode(): DisplayMode | null {
+  return useOpenAiGlobal('displayMode') as DisplayMode | null;
+}
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
+/**
+ * Hook to get the current theme
+ *
+ * @example
+ * ```tsx
+ * const theme = useTheme();
+ *
+ * return <div className={theme === 'dark' ? 'dark-mode' : 'light-mode'}>
+ *   ...
+ * </div>;
+ * ```
+ */
+export function useTheme(): Theme | null {
+  return useOpenAiGlobal('theme') as Theme | null;
+}
 
-    const api = ensureOpenAIObject();
-    let currentValue = api.displayMode;
+/**
+ * Hook to get the user's locale
+ *
+ * @example
+ * ```tsx
+ * const locale = useLocale();
+ *
+ * return <FormattedMessage locale={locale} />;
+ * ```
+ */
+export function useLocale(): string | null {
+  return useOpenAiGlobal('locale') as string | null;
+}
 
-    // Set up a reactive property
-    Object.defineProperty(api, 'displayMode', {
-      get() {
-        return currentValue;
-      },
-      set(newValue: DisplayMode) {
-        currentValue = newValue;
-        setDisplayMode(newValue);
-      },
-      configurable: true,
-      enumerable: true,
-    });
+/**
+ * Hook to get user agent information
+ *
+ * @example
+ * ```tsx
+ * const userAgent = useUserAgent();
+ *
+ * if (userAgent?.device.type === 'mobile') {
+ *   return <MobileView />;
+ * }
+ * ```
+ */
+export function useUserAgent(): UserAgent | null {
+  return useOpenAiGlobal('userAgent') as UserAgent | null;
+}
 
-    // Set initial value
-    if (currentValue !== undefined) {
-      setDisplayMode(currentValue);
-    }
+/**
+ * Hook to get maximum height constraint
+ *
+ * @example
+ * ```tsx
+ * const maxHeight = useMaxHeight();
+ *
+ * return <div style={{ maxHeight }}>{content}</div>;
+ * ```
+ */
+export function useMaxHeight(): number | null {
+  return useOpenAiGlobal('maxHeight') as number | null;
+}
 
-    return () => {
-      // Cleanup is handled by not redefining the property
-    };
-  }, []);
-
-  return displayMode;
+/**
+ * Hook to get safe area insets
+ *
+ * @example
+ * ```tsx
+ * const safeArea = useSafeArea();
+ *
+ * return <div style={{ paddingTop: safeArea?.insets.top }}>
+ *   {content}
+ * </div>;
+ * ```
+ */
+export function useSafeArea(): SafeArea | null {
+  return useOpenAiGlobal('safeArea') as SafeArea | null;
 }
 
 /**

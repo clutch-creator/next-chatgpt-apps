@@ -93,7 +93,7 @@ export function ChatGPTBootstrap({
       }
 
       return originalFetch.call(window, input, init);
-    };
+    } as typeof fetch;
 
     // 3. Prevent parent frame interference with DOM mutations
     const htmlElement = document.documentElement;

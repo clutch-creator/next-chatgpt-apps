@@ -14,18 +14,21 @@ This is `next-chatgpt-apps`, a comprehensive SDK for integrating Next.js applica
 ## Code Style & Conventions
 
 ### TypeScript
+
 - Always use TypeScript with strict mode enabled
 - Prefer interfaces over types for object shapes
 - Export types alongside implementations
 - Use JSDoc comments for public APIs
 
 ### React Components
+
 - All components are client components (`'use client'`)
 - Use functional components with hooks
 - Keep components focused and single-purpose
 - Export both named and default exports where appropriate
 
 ### File Organization
+
 ```
 src/
 ├── components/     # React components (must use 'use client')
@@ -39,24 +42,28 @@ src/
 ## Key Concepts
 
 ### 1. ChatGPT Iframe Architecture
+
 - Apps run inside a triple-iframe structure in ChatGPT
 - Browser APIs need patching (history, fetch, DOM mutations)
 - Base URL must be set for correct asset loading
 - Only activate patches when detected inside ChatGPT iframe
 
 ### 2. Component Naming
+
 - **ChatGPTBootstrap** - Main setup component (renders `<base>` tag, applies patches)
   - Auto-detects base URL (no config needed)
   - No children prop (self-contained)
   - Optional: `debug` and `enableExternalLinks` props
 
 ### 3. Proxy vs Middleware
+
 - Use "proxy" terminology (Next.js 16+ convention)
 - NOT "middleware" (that's Next.js 15)
 - Functions: `chatGPTProxy`, `createChatGPTProxy`
 - File: `proxy.ts` (not `middleware.ts`)
 
 ### 4. Hooks Pattern
+
 - All hooks check `window.openai` availability
 - Return safe defaults when not in ChatGPT
 - Use TypeScript generics for type-safe data access
@@ -65,6 +72,7 @@ src/
 ## Coding Guidelines
 
 ### When Creating Components
+
 ```typescript
 'use client';
 
@@ -82,23 +90,25 @@ export default MyComponent;
 ```
 
 ### When Creating Hooks
+
 ```typescript
 'use client';
 
 export function useMyHook() {
   // Check if in ChatGPT environment
   const isAvailable = typeof window !== 'undefined' && !!window.openai;
-  
+
   // Return safe defaults when unavailable
   if (!isAvailable) {
     return null; // or appropriate default
   }
-  
+
   // Implementation
 }
 ```
 
 ### When Creating Utilities
+
 ```typescript
 /**
  * Description of what this utility does
@@ -110,6 +120,7 @@ export function myUtility(param: string): string {
 ```
 
 ### When Writing Documentation
+
 - Keep examples simple and practical
 - Show both basic and advanced usage
 - Include TypeScript types in examples
@@ -119,6 +130,7 @@ export function myUtility(param: string): string {
 ## Common Patterns
 
 ### Environment Detection
+
 ```typescript
 // Browser check
 if (typeof window === 'undefined') return;
@@ -132,6 +144,7 @@ const isAvailable = window.openai !== undefined;
 ```
 
 ### Base URL Handling
+
 ```typescript
 import { getBaseURL } from '../utils/base-url';
 
@@ -140,6 +153,7 @@ const baseUrl = getBaseURL();
 ```
 
 ### Type-Safe Hook Usage
+
 ```typescript
 interface MyData {
   name: string;
@@ -164,7 +178,7 @@ const props = useWidgetProps<MyData>();
 - **QUICK_REFERENCE.md** - Quick reference for developers
 - **API_REFERENCE.md** - Complete API documentation
 - **PROJECT_SUMMARY.md** - Project overview and architecture
-- **CHANGELOG.md** - Version history and breaking changes
+- **CHANGELOG.md** - Version history and breaking changes (this is handled by changeset, dont change it manually)
 
 ## Common Mistakes to Avoid
 
