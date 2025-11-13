@@ -29,11 +29,13 @@ export function getBaseURL(): string {
 
 export function isInIframe(): boolean {
   if (typeof window === 'undefined') return false;
+
   return window.self !== window.top;
 }
 
 export function isChatGPTIframe(baseUrl: string): boolean {
   if (typeof window === 'undefined') return false;
   const appOrigin = new URL(baseUrl).origin;
+
   return isInIframe() && window.location.origin !== appOrigin;
 }

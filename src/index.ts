@@ -9,6 +9,8 @@ export { withChatGPT } from './config/with-chatgpt';
 // Components
 export { ChatGPTBootstrap } from './components/ChatGPTBootstrap';
 export type { ChatGPTBootstrapProps } from './components/ChatGPTBootstrap';
+export { UrlController } from './components/UrlController';
+export type { UrlControllerProps, UrlData } from './components/UrlController';
 
 // Hooks
 export {

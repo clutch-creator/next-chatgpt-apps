@@ -27,8 +27,8 @@ export interface UserAgent {
 
 export interface CallToolResponse {
   content?: Array<{ type: string; text: string }>;
-  structuredContent?: Record<string, any>;
-  _meta?: Record<string, any>;
+  structuredContent?: Record<string, unknown>;
+  _meta?: Record<string, unknown>;
 }
 
 export interface OpenAIAPI {
@@ -97,22 +97,22 @@ export interface OpenAIAPI {
   /**
    * Input parameters passed to the tool
    */
-  toolInput: Record<string, any>;
+  toolInput: Record<string, unknown>;
 
   /**
    * Structured data passed from tool invocations
    */
-  toolOutput: Record<string, any> | null;
+  toolOutput: Record<string, unknown> | null;
 
   /**
    * Additional metadata from tool response (not shown to model)
    */
-  toolResponseMetadata: Record<string, any> | null;
+  toolResponseMetadata: Record<string, unknown> | null;
 
   /**
    * Persisted widget state
    */
-  widgetState: Record<string, any> | null;
+  widgetState: Record<string, unknown> | null;
 
   /**
    * @deprecated Use sendFollowUpMessage instead
@@ -156,7 +156,7 @@ export interface WidgetMetadata {
   'openai/resultCanProduceWidget'?: boolean;
 }
 
-export interface ChatGPTToolOutput<T = any> {
+export interface ChatGPTToolOutput<T = unknown> {
   /**
    * The structured data from the tool invocation
    */
@@ -170,7 +170,7 @@ export interface ChatGPTToolOutput<T = any> {
   /**
    * Any additional metadata
    */
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ChatGPTConfig {

@@ -26,6 +26,7 @@ export function ChatGPTBootstrap({
     const inChatGPTIframe = isChatGPTIframe(baseUrl);
 
     if (debug) {
+      // eslint-disable-next-line no-console
       console.log('[ChatGPT] Bootstrap initialized', {
         baseUrl,
         appOrigin,
@@ -39,29 +40,34 @@ export function ChatGPTBootstrap({
 
     // 1. Patch history API to prevent URL leaks
     const originalReplaceState = history.replaceState;
+
     history.replaceState = function (
-      state: any,
+      state: unknown,
       unused: string,
       url?: string | URL | null
     ) {
       const u = new URL(url ?? '', window.location.href);
       const href = u.pathname + u.search + u.hash;
+
       originalReplaceState.call(history, state, unused, href);
     };
 
     const originalPushState = history.pushState;
+
     history.pushState = function (
-      state: any,
+      state: unknown,
       unused: string,
       url?: string | URL | null
     ) {
       const u = new URL(url ?? '', window.location.href);
       const href = u.pathname + u.search + u.hash;
+
       originalPushState.call(history, state, unused, href);
     };
 
     // 2. Patch fetch for client-side navigation
     const originalFetch = window.fetch;
+
     window.fetch = function (
       input: RequestInfo | URL,
       init?: RequestInit
@@ -82,6 +88,7 @@ export function ChatGPTBootstrap({
       // If the request targets the iframe's origin, rewrite it
       if (url.origin === window.location.origin) {
         const newUrl = new URL(baseUrl);
+
         newUrl.pathname = url.pathname;
         newUrl.search = url.search;
         newUrl.hash = url.hash;
@@ -101,6 +108,7 @@ export function ChatGPTBootstrap({
       mutations.forEach(mutation => {
         if (mutation.type === 'attributes' && mutation.target === htmlElement) {
           const attrName = mutation.attributeName;
+
           if (attrName && attrName !== 'suppresshydrationwarning') {
             htmlElement.removeAttribute(attrName);
           }
@@ -118,10 +126,12 @@ export function ChatGPTBootstrap({
       const handleClick = (e: MouseEvent) => {
         const target = e.target as HTMLElement;
         const a = target?.closest('a');
+
         if (!a || !a.href) return;
 
         try {
           const url = new URL(a.href, window.location.href);
+
           if (
             url.origin !== window.location.origin &&
             url.origin !== appOrigin
@@ -133,6 +143,7 @@ export function ChatGPTBootstrap({
           }
         } catch (err) {
           if (debug) {
+            // eslint-disable-next-line no-console
             console.warn('[ChatGPT] Failed to process external link', err);
           }
         }

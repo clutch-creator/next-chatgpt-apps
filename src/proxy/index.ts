@@ -30,6 +30,7 @@ export function chatGPTProxy(request: NextRequest) {
   // Handle OPTIONS preflight requests
   if (request.method === 'OPTIONS') {
     const response = new NextResponse(null, { status: 204 });
+
     response.headers.set('Access-Control-Allow-Origin', '*');
     response.headers.set(
       'Access-Control-Allow-Methods',
@@ -37,11 +38,13 @@ export function chatGPTProxy(request: NextRequest) {
     );
     response.headers.set('Access-Control-Allow-Headers', '*');
     response.headers.set('Access-Control-Max-Age', '86400'); // 24 hours
+
     return response;
   }
 
   // Add CORS headers to all responses
   const response = NextResponse.next();
+
   response.headers.set('Access-Control-Allow-Origin', '*');
   response.headers.set(
     'Access-Control-Allow-Methods',
@@ -73,6 +76,7 @@ export function createChatGPTProxy(
     // Handle OPTIONS preflight requests first
     if (request.method === 'OPTIONS') {
       const response = new NextResponse(null, { status: 204 });
+
       response.headers.set('Access-Control-Allow-Origin', '*');
       response.headers.set(
         'Access-Control-Allow-Methods',
@@ -80,6 +84,7 @@ export function createChatGPTProxy(
       );
       response.headers.set('Access-Control-Allow-Headers', '*');
       response.headers.set('Access-Control-Max-Age', '86400');
+
       return response;
     }
 

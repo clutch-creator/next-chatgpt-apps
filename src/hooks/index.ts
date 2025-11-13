@@ -25,18 +25,23 @@ type SetStateAction<T> = T | ((prev: T) => T);
 export function useOpenAiGlobal<K extends keyof OpenAIAPI>(
   key: K
 ): OpenAIAPI[K] | undefined {
-  if (typeof window === 'undefined') {
-    return undefined;
-  }
+  const isClient = typeof window !== 'undefined';
 
   return useSyncExternalStore(
     onChange => {
+      if (!isClient) {
+        return () => {
+          // No-op
+        };
+      }
+
       const handleSetGlobal = (event: Event) => {
         const customEvent = event as SetGlobalsEvent;
         const value =
           customEvent.detail?.globals[
             key as keyof typeof customEvent.detail.globals
           ];
+
         if (value !== undefined) {
           onChange();
         }
@@ -50,7 +55,7 @@ export function useOpenAiGlobal<K extends keyof OpenAIAPI>(
         window.removeEventListener(SET_GLOBALS_EVENT_TYPE, handleSetGlobal);
       };
     },
-    () => window.openai?.[key]
+    () => (isClient ? window.openai?.[key] : undefined)
   );
 }
 
@@ -91,6 +96,7 @@ export function useChatGPT() {
       if (window.openai?.callTool) {
         return await window.openai.callTool(name, args);
       }
+
       return { content: [], structuredContent: null };
     },
     []
@@ -100,6 +106,7 @@ export function useChatGPT() {
     if (window.openai?.requestDisplayMode) {
       return await window.openai.requestDisplayMode({ mode });
     }
+
     return { mode: 'inline' as DisplayMode };
   }, []);
 
@@ -127,6 +134,7 @@ export function useChatGPT() {
  */
 export function useSendMessage() {
   const { sendFollowUpMessage } = useChatGPT();
+
   return sendFollowUpMessage;
 }
 
@@ -144,6 +152,7 @@ export function useSendMessage() {
  */
 export function useOpenExternal() {
   const { openExternal } = useChatGPT();
+
   return openExternal;
 }
 
@@ -159,6 +168,7 @@ export function useOpenExternal() {
  */
 export function useCallTool() {
   const { callTool } = useChatGPT();
+
   return callTool;
 }
 
@@ -176,6 +186,7 @@ export function useCallTool() {
  */
 export function useRequestDisplayMode() {
   const { requestDisplayMode } = useChatGPT();
+
   return requestDisplayMode;
 }
 
@@ -191,13 +202,13 @@ export function useRequestDisplayMode() {
  * </button>
  * ```
  */
-export function useWidgetState<T extends Record<string, any>>(
+export function useWidgetState<T extends Record<string, unknown>>(
   defaultState: T | (() => T)
 ): readonly [T, (state: SetStateAction<T>) => void];
-export function useWidgetState<T extends Record<string, any>>(
+export function useWidgetState<T extends Record<string, unknown>>(
   defaultState?: T | (() => T | null) | null
 ): readonly [T | null, (state: SetStateAction<T | null>) => void];
-export function useWidgetState<T extends Record<string, any>>(
+export function useWidgetState<T extends Record<string, unknown>>(
   defaultState?: T | (() => T | null) | null
 ): readonly [T | null, (state: SetStateAction<T | null>) => void] {
   const widgetStateFromWindow = useOpenAiGlobal('widgetState') as T | null;
@@ -242,7 +253,7 @@ export function useWidgetState<T extends Record<string, any>>(
  * const name = toolOutput?.name;
  * ```
  */
-export function useWidgetProps<T = any>(): T | null {
+export function useWidgetProps<T = unknown>(): T | null {
   return useOpenAiGlobal('toolOutput') as T | null;
 }
 
@@ -254,7 +265,7 @@ export function useWidgetProps<T = any>(): T | null {
  * const data = useToolOutput<{ name: string; timestamp: string }>();
  * ```
  */
-export function useToolOutput<T = any>(): ChatGPTToolOutput<T> | null {
+export function useToolOutput<T = unknown>(): ChatGPTToolOutput<T> | null {
   return useWidgetProps<ChatGPTToolOutput<T>>();
 }
 
@@ -267,7 +278,7 @@ export function useToolOutput<T = any>(): ChatGPTToolOutput<T> | null {
  * const city = input?.city;
  * ```
  */
-export function useToolInput<T = any>(): T | null {
+export function useToolInput<T = unknown>(): T | null {
   return useOpenAiGlobal('toolInput') as T | null;
 }
 
@@ -279,7 +290,7 @@ export function useToolInput<T = any>(): T | null {
  * const metadata = useToolResponseMetadata<{ internalId: string }>();
  * ```
  */
-export function useToolResponseMetadata<T = any>(): T | null {
+export function useToolResponseMetadata<T = unknown>(): T | null {
   return useOpenAiGlobal('toolResponseMetadata') as T | null;
 }
 

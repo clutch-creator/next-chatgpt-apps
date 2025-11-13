@@ -1,6 +1,6 @@
 {
   "name": "next-chatgpt-apps",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "A comprehensive toolkit for integrating Next.js applications with ChatGPT's native app platform",
   "author": "Clutch Creator",
   "license": "MIT",
@@ -86,6 +86,8 @@
     "chokidar": "^4.0.3",
     "eslint": "^9.38.0",
     "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-react-hooks": "^5.1.0",
     "prettier": "^3.6.2",
     "typescript": "^5",
     "typescript-eslint": "^8.46.1",
