@@ -30,6 +30,13 @@ export interface UrlControllerProps {
   debug?: boolean;
 }
 
+interface ToolOutputData {
+  url?: {
+    pathname: string;
+    searchParams?: Record<string, string>;
+  };
+}
+
 /**
  * UrlController component synchronizes URL state between Next.js routing and ChatGPT.
  *
@@ -57,14 +64,11 @@ export interface UrlControllerProps {
  * <UrlController urlKey="navigation" debug={true} />
  * ```
  */
-export function UrlController({
-  urlKey = 'url',
-  debug = false,
-}: UrlControllerProps = {}) {
+export function UrlController() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const toolOutput = useToolOutput<Record<string, unknown>>();
+  const toolOutput = useToolOutput<ToolOutputData>();
   const [, setWidgetState] = useWidgetState<{ url: UrlData }>();
 
   // Track the last URL we navigated to from ChatGPT to avoid circular updates
@@ -75,7 +79,7 @@ export function UrlController({
   useEffect(() => {
     if (!toolOutput || !router) return;
 
-    const urlData = toolOutput[urlKey] as UrlData | undefined;
+    const urlData = toolOutput.url;
 
     if (!urlData?.pathname) return;
 
@@ -106,7 +110,7 @@ export function UrlController({
       (searchParams?.toString() ? `?${searchParams.toString()}` : '');
 
     if (targetUrl !== currentUrl && targetUrl !== lastChatGPTUrlRef.current) {
-      if (debug) {
+      if (process.env.NODE_ENV !== 'production') {
         // eslint-disable-next-line no-console
         console.log('[UrlController] Navigating from ChatGPT:', {
           from: currentUrl,
@@ -118,7 +122,7 @@ export function UrlController({
       lastChatGPTUrlRef.current = targetUrl;
       router.push(targetUrl);
     }
-  }, [toolOutput, urlKey, router, pathname, searchParams, debug]);
+  }, [toolOutput, router, pathname, searchParams]);
 
   // Listen to route changes in the app and sync back to ChatGPT
   useEffect(() => {
@@ -165,7 +169,7 @@ export function UrlController({
       }
     }
 
-    if (debug) {
+    if (process.env.NODE_ENV !== 'production') {
       // eslint-disable-next-line no-console
       console.log('[UrlController] Syncing to ChatGPT:', {
         url: currentUrl,
@@ -175,7 +179,7 @@ export function UrlController({
 
     lastAppUrlRef.current = currentUrl;
     setWidgetState({ url: urlData });
-  }, [pathname, searchParams, setWidgetState, debug]);
+  }, [pathname, searchParams, setWidgetState]);
 
   // This component doesn't render anything
   return null;

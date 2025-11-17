@@ -156,23 +156,6 @@ export interface WidgetMetadata {
   'openai/resultCanProduceWidget'?: boolean;
 }
 
-export interface ChatGPTToolOutput<T = unknown> {
-  /**
-   * The structured data from the tool invocation
-   */
-  data?: T;
-
-  /**
-   * Timestamp of when the tool was invoked
-   */
-  timestamp?: string;
-
-  /**
-   * Any additional metadata
-   */
-  [key: string]: unknown;
-}
-
 export interface ChatGPTConfig {
   /**
    * Base URL of your application

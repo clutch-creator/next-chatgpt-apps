@@ -523,7 +523,7 @@ This package implements the necessary patches for Next.js to work inside ChatGPT
 
 The base URL is automatically determined from:
 
-- `NEXT_PUBLIC_BASE_URL` (manual override)
+- `NEXT_PUBLIC_WEBSITE_URL` (manual override)
 - `VERCEL_PROJECT_PRODUCTION_URL` (Vercel production)
 - `VERCEL_BRANCH_URL` (Vercel preview)
 - `VERCEL_URL` (Vercel fallback)

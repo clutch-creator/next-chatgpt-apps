@@ -7,7 +7,6 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import {
   SET_GLOBALS_EVENT_TYPE,
-  type ChatGPTToolOutput,
   type DisplayMode,
   type OpenAIAPI,
   type SafeArea,
@@ -55,7 +54,8 @@ export function useOpenAiGlobal<K extends keyof OpenAIAPI>(
         window.removeEventListener(SET_GLOBALS_EVENT_TYPE, handleSetGlobal);
       };
     },
-    () => (isClient ? window.openai?.[key] : undefined)
+    () => (isClient ? window.openai?.[key] : undefined),
+    () => undefined
   );
 }
 
@@ -265,8 +265,8 @@ export function useWidgetProps<T = unknown>(): T | null {
  * const data = useToolOutput<{ name: string; timestamp: string }>();
  * ```
  */
-export function useToolOutput<T = unknown>(): ChatGPTToolOutput<T> | null {
-  return useWidgetProps<ChatGPTToolOutput<T>>();
+export function useToolOutput<T = unknown>(): T | null {
+  return useWidgetProps<T>();
 }
 
 /**

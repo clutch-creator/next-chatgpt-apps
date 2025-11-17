@@ -5,173 +5,147 @@
  * Sets up ChatGPT integration with all necessary patches and base URL configuration
  */
 
-import { useEffect } from 'react';
-import { getBaseURL, isChatGPTIframe } from '../utils/base-url';
+import { getBaseURL } from '../utils/base-url';
 
-export interface ChatGPTBootstrapProps {
-  debug?: boolean;
-  enableExternalLinks?: boolean;
+declare global {
+  interface Window {
+    innerBaseUrl?: string;
+    __isChatGptApp?: boolean;
+  }
 }
 
-export function ChatGPTBootstrap({
-  debug = false,
-  enableExternalLinks = true,
-}: ChatGPTBootstrapProps = {}) {
-  const baseUrl = getBaseURL();
+const baseUrl = getBaseURL();
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
+export function ChatGPTBootstrap() {
+  return (
+    <>
+      <base href={baseUrl}></base>
+      <script>{`window.innerBaseUrl = ${JSON.stringify(baseUrl)}`}</script>
+      <script>{`window.__isChatGptApp = typeof window.openai !== "undefined";`}</script>
+      <script>
+        {'(' +
+          (() => {
+            const baseUrl = window.innerBaseUrl;
 
-    const appOrigin = new URL(baseUrl).origin;
-    const inChatGPTIframe = isChatGPTIframe(baseUrl);
-
-    if (debug) {
-      // eslint-disable-next-line no-console
-      console.log('[ChatGPT] Bootstrap initialized', {
-        baseUrl,
-        appOrigin,
-        currentOrigin: window.location.origin,
-        inChatGPTIframe,
-      });
-    }
-
-    // Only apply patches if running in ChatGPT iframe
-    if (!inChatGPTIframe) return;
-
-    // 1. Patch history API to prevent URL leaks
-    const originalReplaceState = history.replaceState;
-
-    history.replaceState = function (
-      state: unknown,
-      unused: string,
-      url?: string | URL | null
-    ) {
-      const u = new URL(url ?? '', window.location.href);
-      const href = u.pathname + u.search + u.hash;
-
-      originalReplaceState.call(history, state, unused, href);
-    };
-
-    const originalPushState = history.pushState;
-
-    history.pushState = function (
-      state: unknown,
-      unused: string,
-      url?: string | URL | null
-    ) {
-      const u = new URL(url ?? '', window.location.href);
-      const href = u.pathname + u.search + u.hash;
-
-      originalPushState.call(history, state, unused, href);
-    };
-
-    // 2. Patch fetch for client-side navigation
-    const originalFetch = window.fetch;
-
-    window.fetch = function (
-      input: RequestInfo | URL,
-      init?: RequestInit
-    ): Promise<Response> {
-      let url: URL;
-
-      // Parse the request URL from various input types
-      if (input instanceof URL) {
-        url = input;
-      } else if (typeof input === 'string') {
-        url = new URL(input, window.location.href);
-      } else if (input instanceof Request) {
-        url = new URL(input.url, window.location.href);
-      } else {
-        return originalFetch.call(window, input, init);
-      }
-
-      // If the request targets the iframe's origin, rewrite it
-      if (url.origin === window.location.origin) {
-        const newUrl = new URL(baseUrl);
-
-        newUrl.pathname = url.pathname;
-        newUrl.search = url.search;
-        newUrl.hash = url.hash;
-
-        return originalFetch.call(window, newUrl.toString(), {
-          ...init,
-          mode: 'cors', // Enable CORS for cross-origin RSC requests
-        });
-      }
-
-      return originalFetch.call(window, input, init);
-    } as typeof fetch;
-
-    // 3. Prevent parent frame interference with DOM mutations
-    const htmlElement = document.documentElement;
-    const observer = new MutationObserver(mutations => {
-      mutations.forEach(mutation => {
-        if (mutation.type === 'attributes' && mutation.target === htmlElement) {
-          const attrName = mutation.attributeName;
-
-          if (attrName && attrName !== 'suppresshydrationwarning') {
-            htmlElement.removeAttribute(attrName);
-          }
-        }
-      });
-    });
-
-    observer.observe(htmlElement, {
-      attributes: true,
-      attributeOldValue: true,
-    });
-
-    // 4. Handle external links
-    if (enableExternalLinks) {
-      const handleClick = (e: MouseEvent) => {
-        const target = e.target as HTMLElement;
-        const a = target?.closest('a');
-
-        if (!a || !a.href) return;
-
-        try {
-          const url = new URL(a.href, window.location.href);
-
-          if (
-            url.origin !== window.location.origin &&
-            url.origin !== appOrigin
-          ) {
-            if (window.openai?.openExternal) {
-              window.openai.openExternal({ href: a.href });
-              e.preventDefault();
+            if (!window.__isChatGptApp || !baseUrl) {
+              return;
             }
-          }
-        } catch (err) {
-          if (debug) {
-            // eslint-disable-next-line no-console
-            console.warn('[ChatGPT] Failed to process external link', err);
-          }
-        }
-      };
 
-      window.addEventListener('click', handleClick, true);
+            const htmlElement = document.documentElement;
+            const observer = new MutationObserver(mutations => {
+              mutations.forEach(mutation => {
+                if (
+                  mutation.type === 'attributes' &&
+                  mutation.target === htmlElement
+                ) {
+                  const attrName = mutation.attributeName;
+                  if (attrName && attrName !== 'suppresshydrationwarning') {
+                    htmlElement.removeAttribute(attrName);
+                  }
+                }
+              });
+            });
+            observer.observe(htmlElement, {
+              attributes: true,
+              attributeOldValue: true,
+            });
 
-      // Cleanup
-      return () => {
-        window.removeEventListener('click', handleClick, true);
-        observer.disconnect();
-        // Restore original APIs
-        history.replaceState = originalReplaceState;
-        history.pushState = originalPushState;
-        window.fetch = originalFetch;
-      };
-    }
+            const originalReplaceState = history.replaceState;
+            history.replaceState = (s, unused, url) => {
+              const u = new URL(url ?? '', window.location.href);
+              const href = u.pathname + u.search + u.hash;
+              console.log('replace', href);
+              originalReplaceState.call(history, unused, href);
+            };
 
-    // Cleanup
-    return () => {
-      observer.disconnect();
-      history.replaceState = originalReplaceState;
-      history.pushState = originalPushState;
-      window.fetch = originalFetch;
-    };
-  }, [baseUrl, debug, enableExternalLinks]);
+            const originalPushState = history.pushState;
+            history.pushState = (s, unused, url) => {
+              const u = new URL(url ?? '', window.location.href);
+              const href = u.pathname + u.search + u.hash;
+              console.log('push', href);
+              originalPushState.call(history, unused, href);
+            };
 
-  return <base href={baseUrl} />;
+            const appOrigin = new URL(baseUrl).origin;
+            const isInIframe = window.self !== window.top;
+
+            window.addEventListener(
+              'click',
+              e => {
+                const a = (e?.target as HTMLElement)?.closest('a');
+                if (!a || !a.href) return;
+                const url = new URL(a.href, window.location.href);
+                if (
+                  url.origin !== window.location.origin &&
+                  url.origin != appOrigin
+                ) {
+                  try {
+                    if (window.openai) {
+                      window.openai?.openExternal({ href: a.href });
+                      e.preventDefault();
+                    }
+                  } catch {
+                    console.warn(
+                      'openExternal failed, likely not in OpenAI client'
+                    );
+                  }
+                }
+              },
+              true
+            );
+
+            if (isInIframe && window.location.origin !== appOrigin) {
+              const originalFetch = window.fetch;
+
+              // @ts-expect-error ignore fetch patching
+              window.fetch = (input: URL | RequestInfo, init?: RequestInit) => {
+                let url: URL;
+                if (typeof input === 'string' || input instanceof URL) {
+                  url = new URL(input, window.location.href);
+                } else {
+                  url = new URL(input.url, window.location.href);
+                }
+
+                if (url.origin === appOrigin) {
+                  if (typeof input === 'string' || input instanceof URL) {
+                    input = url.toString();
+                  } else {
+                    input = new Request(url.toString(), input);
+                  }
+
+                  return originalFetch.call(window, input, {
+                    ...init,
+                    mode: 'cors',
+                  });
+                }
+
+                if (url.origin === window.location.origin) {
+                  const newUrl = new URL(baseUrl);
+                  newUrl.pathname = url.pathname;
+                  newUrl.search = url.search;
+                  newUrl.hash = url.hash;
+                  url = newUrl;
+
+                  if (typeof input === 'string' || input instanceof URL) {
+                    input = url.toString();
+                  } else {
+                    input = new Request(url.toString(), input);
+                  }
+
+                  return originalFetch.call(window, input, {
+                    ...init,
+                    mode: 'cors',
+                  });
+                }
+
+                return originalFetch.call(window, input, init);
+              };
+            }
+          }).toString() +
+          ')()'}
+      </script>
+    </>
+  );
 }
 
 export default ChatGPTBootstrap;
